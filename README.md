@@ -1,4 +1,4 @@
-# living-memory
+# openclew
 
 > Long Life Memory for LLMs
 
@@ -6,7 +6,7 @@
 
 Decisions, architecture, conventions, lessons learned. Structured in 3 levels so humans skim what they need and agents parse only what's relevant. Git-versioned, always in sync.
 
-**living-memory** is a simple convention — just Markdown files. Not a framework, not a tool. Everyone shares the same source of truth.
+**openclew** is a simple convention — just Markdown files. Not a framework, not a tool. Everyone shares the same source of truth.
 
 ---
 
@@ -258,7 +258,7 @@ The agent scans 30 L1 headers in 2 seconds, reads the 3 docs it needs, and start
 
 **AI agents:** Claude Code, Cursor, Copilot, Windsurf, Codex, Zed, Kiro, Aider, Cline, Gemini CLI...
 
-**Workflow frameworks:** BMAD, Spec Kit, or any methodology — living-memory handles knowledge, your framework handles process.
+**Workflow frameworks:** BMAD, Spec Kit, or any methodology — openclew handles knowledge, your framework handles process.
 
 **It's just Markdown.** No runtime, no dependencies, no lock-in. Git-versioned, diffable, reviewable in PRs. If you stop using it, the docs are still useful — to humans and agents alike.
 
@@ -266,7 +266,7 @@ The agent scans 30 L1 headers in 2 seconds, reads the 3 docs it needs, and start
 
 ## Compared to alternatives
 
-| Feature | CLAUDE.md | Cline Memory Bank | BMAD | living-memory |
+| Feature | CLAUDE.md | Cline Memory Bank | BMAD | openclew |
 |---------|-----------|-------------------|------|---------------|
 | Readable by humans AND agents | partial | partial | yes | **yes** |
 | Levels of info (L1/L2/L3) | - | - | - | **yes** |
