@@ -2,70 +2,83 @@
 
 > Long Life Memory for LLMs
 
-**Your project's knowledge lives in one place — for you, your team, and your AI agents.**
+**Your agent forgets. Your project remembers.**
 
-Decisions, architecture, conventions, lessons learned. Structured in 3 levels so humans skim what they need and agents parse only what's relevant. Git-versioned, always in sync.
+In Greek mythology, Ariadne gave Theseus a *clew* — a ball of thread — to find his way out of the Minotaur's labyrinth. That thread is the etymological origin of the word "clue." It wasn't a map. It wasn't a search engine. It was a continuous trail that connected where you've been to where you are.
 
-**openclew** is a simple convention — just Markdown files. Not a framework, not a tool. Everyone shares the same source of truth.
+That's what openclew does for your project. Every decision, every architectural choice, every hard-won lesson — laid down as a thread that any reader (human or AI) can follow. Not scattered across wikis, chat logs, and CLAUDE.md files that grow until they're unreadable. One trail. One source of truth.
 
 ---
 
-## The problem
+## Why this exists
 
-Project knowledge gets fragmented between humans and AI agents. Neither side has the full picture:
+AI agents are powerful, but they're amnesiac. Every new session starts from zero. The usual fixes don't work:
 
-| Who | What they know | What they lose |
-|-----|---------------|----------------|
-| **You** | Architecture, decisions, context | Forget details, can't explain everything every session |
-| **AI agent** | What's in the current context window | Everything from previous sessions |
-| **New teammate** | Nothing yet | Has to ask, read scattered docs, or guess |
-
-The workarounds don't scale:
-
-| Approach | Problem |
-|----------|---------|
-| CLAUDE.md / .cursorrules | Grows into an unreadable wall of text — not great for humans or agents |
+| Approach | What goes wrong |
+|----------|----------------|
+| CLAUDE.md / .cursorrules | Grows into an unreadable wall of text. Agent loads everything, wastes tokens on irrelevant context |
 | Agent memory (Claude, Copilot) | Opaque, not versioned, not shareable with the team |
-| README.md | Not structured for AI consumption |
 | Wiki / Notion | Disconnected from the code, goes stale |
+| README.md | Not structured for AI consumption |
 | Nothing | Re-explain everything every session |
 
-## The solution: 3 levels of information
+The deeper problem isn't *storage* — it's **navigation**. A project with 50 documents and 200K tokens of knowledge can't be loaded in full. The real question an agent (or a human) needs to answer is:
 
-Every document has 3 levels. Same file, different depths — for different readers.
+> **"Should I read this document?"**
+
+Not "does this file contain the word `auth`?" — that's pattern matching. The question is about *relevance*. And you can only answer it if documents are designed to be skimmed before they're read.
+
+---
+
+## The idea: 3 levels of depth
+
+Every openclew document has 3 levels. Same file, different depths — for different needs.
 
 ```
 ┌─────────────────────────────────────────────┐
 │  L1 — Metadata                              │
 │  type, subject, status, keywords            │
-│  → Agents parse this to navigate fast       │
-│  → Auto-indexed, searchable                 │
+│  → "Should I read this?" — decidable in     │
+│     2 seconds, ~40 tokens per doc            │
+│  → Auto-indexed, machine-parseable          │
 ├─────────────────────────────────────────────┤
 │  L2 — Summary                               │
 │  Objective, key points, solution            │
-│  → Humans read this to get up to speed      │
-│  → New teammate onboards in minutes         │
+│  → The full picture in 30 seconds           │
+│  → Enough for most decisions                │
 ├─────────────────────────────────────────────┤
 │  L3 — Details                               │
-│  Code, examples, history, references        │
-│  → Deep-dive when you actually need it      │
-│  → Agents or humans, only when relevant     │
+│  Code, examples, history, edge cases        │
+│  → Deep-dive only when actually needed      │
+│  → Most readers never go here               │
 └─────────────────────────────────────────────┘
 ```
 
-**For agents:** A project with 50 docs would burn 100K+ tokens if read in full. With L1, it scans all 50 in ~2K tokens, then reads only the 2-3 it needs.
+This isn't just an organizational trick — it's a **token efficiency strategy**. A project with 50 docs:
 
-**For humans:** L2 gives you the full picture in 30 seconds — no need to read code or ask a colleague. New teammates onboard by reading L2s.
+| Strategy | Tokens consumed | Relevance |
+|----------|----------------|-----------|
+| Load everything | ~200K | Mostly noise |
+| Grep for keywords | Variable | Misses context, false positives |
+| **Read all L1s, then L2 of relevant docs** | **~2K + 2-3 docs** | **Precise, contextual** |
+
+L1 answers "should I read this?" L2 answers "what do I need to know?" L3 is there when you need the details. Most of the time, you don't.
+
+---
 
 ## Two types of docs
 
-| Type | Location | Purpose | Mutability |
-|------|----------|---------|------------|
+| Type | Location | Role | Mutability |
+|------|----------|------|------------|
 | **Permanent** | `doc/_SUBJECT.md` | Living knowledge (architecture, conventions, decisions) | Updated over time |
 | **Log** | `doc/log/YYYY-MM-DD_subject.md` | Frozen facts (what happened, what was decided) | Never modified |
 
-**Permanents** are your project's brain — they evolve.
-**Logs** are your project's journal — they're immutable.
+**Permanents** are your project's brain — they evolve as the project evolves.
+**Logs** are your project's journal — immutable records of what happened and why.
+
+Together, they form the thread. The permanent docs tell you where you are. The logs tell you how you got here.
+
+---
 
 ## Quick start (5 minutes)
 
@@ -218,10 +231,11 @@ doc/
 **Session 5** — New agent session, different feature:
 ```
 Agent reads doc/_INDEX.md (auto-generated)
-  → Sees _ARCHITECTURE.md, reads L1 → "I need this" → reads L2
-  → Sees 4 logs, reads L1s → "setup-auth is relevant" → reads L2
+  → Scans all L1s: "Should I read this?"
+  → _ARCHITECTURE.md → yes → reads L2
+  → setup-auth log → relevant → reads L2
   → Skips the rest
-  → Has full context in ~1K tokens instead of 50K
+  → Full context in ~1K tokens instead of 50K
 ```
 
 **Session 20** — Your project has grown:
@@ -239,18 +253,18 @@ doc/
     └── ... (20 more)
 ```
 
-The agent scans 30 L1 headers in 2 seconds, reads the 3 docs it needs, and starts working with full context. A new teammate does the same by reading L2s — same docs, same truth, different depth.
+30 docs. The agent scans all L1s in 2 seconds, reads the 3 that matter, and starts working with full context. A new teammate does the same — reads L2s to get up to speed in minutes. Same docs, same truth, different depth.
 
 ---
 
-## Key principles
+## Principles
 
-- **Shared knowledge** — Same docs for humans and AI. No separate "AI docs" and "human docs". One source, multiple readers.
-- **SSOT** (Single Source of Truth) — Each piece of information lives in one place. No duplication.
-- **Logs are immutable** — Once written, a log is never modified. It's a frozen fact.
-- **Permanents are living** — They evolve as the project evolves. Always up to date.
-- **Index is auto-generated** — Never edit `_INDEX.md` manually. It's rebuilt from L1 metadata.
-- **L1 is always enough to decide** — If a reader (human or agent) can't tell from L1 whether they need the doc, the L1 is poorly written.
+- **"Should I read this?"** — L1 exists to answer this question. If it can't, the L1 is poorly written.
+- **Shared knowledge** — Same docs for humans and AI. One source, multiple readers.
+- **SSOT** (Single Source of Truth) — Each piece of information lives in one place.
+- **Logs are immutable** — Once written, never modified. Frozen facts.
+- **Permanents are living** — They evolve as the project evolves.
+- **Index is auto-generated** — Never edit `_INDEX.md` manually.
 
 ---
 
@@ -267,10 +281,11 @@ The agent scans 30 L1 headers in 2 seconds, reads the 3 docs it needs, and start
 ## Compared to alternatives
 
 | Feature | CLAUDE.md | Cline Memory Bank | BMAD | openclew |
-|---------|-----------|-------------------|------|---------------|
+|---------|-----------|-------------------|------|----------|
 | Readable by humans AND agents | partial | partial | yes | **yes** |
-| Levels of info (L1/L2/L3) | - | - | - | **yes** |
-| Lazy-loading (read only what's needed) | - | - | partial | **yes** |
+| Levels of depth (L1/L2/L3) | - | - | - | **yes** |
+| "Should I read this?" (L1 triage) | - | - | - | **yes** |
+| Token-efficient navigation | - | - | partial | **yes** |
 | Auto-generated index | - | - | CSV | **yes** |
 | Immutable logs | - | - | - | **yes** |
 | Git-versioned | yes | yes | yes | **yes** |
