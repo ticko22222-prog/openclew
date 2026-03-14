@@ -2,10 +2,15 @@ name: Hello Shrimp
 
 on:
   workflow_dispatch:
+    inputs:
+      task:
+        description: '想叫蝦蝦做什麼'
+        required: true
+        default: '幫我整理今天的重點'
 
 jobs:
   hello:
     runs-on: ubuntu-latest
     steps:
-      - name: Say hello
-        run: echo "蝦蝦啟動成功，GitHub Actions 可以正常運作"
+      - name: Show task
+        run: echo "收到任務：${{ github.event.inputs.task }}"
