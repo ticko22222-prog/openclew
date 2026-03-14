@@ -12,42 +12,48 @@ jobs:
   hello:
     runs-on: ubuntu-latest
     steps:
-      - name: Call OpenAI
+      - name: Call Gemini
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TASK: ${{ github.event.inputs.task }}
         run: |
           python - <<'PY'
-          import os
-          import json
-          import urllib.request
+          import os, json, urllib.request, urllib.error
 
-          api_key = os.environ["OPENAI_API_KEY"]
+          api_key = os.environ["GEMINI_API_KEY"]
           task = os.environ["TASK"]
 
-          url = "https://api.openai.com/v1/chat/completions"
+          url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
           data = {
-              "model": "gpt-4o-mini",
-              "messages": [
-                  {"role": "system", "content": "你是一隻雲端小龍蝦助理，請用繁體中文簡潔回覆。"},
-                  {"role": "user", "content": task}
-              ],
-              "temperature": 0.7
+              "contents": [
+                  {
+                      "parts": [
+                          {
+                              "text": f"你是一隻雲端小龍蝦助理，請用繁體中文簡潔回覆。\n\n使用者任務：{task}"
+                          }
+                      ]
+                  }
+              ]
           }
 
           req = urllib.request.Request(
               url,
               data=json.dumps(data).encode("utf-8"),
-              headers={
-                  "Content-Type": "application/json",
-                  "Authorization": f"Bearer {api_key}"
-              }
+              headers={"Content-Type": "application/json"}
           )
 
-          with urllib.request.urlopen(req) as resp:
-              result = json.loads(resp.read().decode("utf-8"))
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  result = json.loads(resp.read().decode("utf-8"))
 
-          print("收到任務：", task)
-          print("AI回覆：")
-          print(result["choices"][0]["message"]["content"])
+              text = result["candidates"][0]["content"]["parts"][0]["text"]
+              print("收到任務：", task)
+              print("AI回覆：")
+              print(text)
+
+          except urllib.error.HTTPError as e:
+              body = e.read().decode("utf-8", errors="ignore")
+              print("HTTP Error:", e.code)
+              print(body)
+              raise
           PY
