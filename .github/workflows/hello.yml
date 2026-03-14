@@ -1,0 +1,11 @@
+name: Hello Shrimp
+
+on:
+  workflow_dispatch:
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Say hello
+        run: echo "蝦蝦啟動成功，GitHub Actions 可以正常運作"
