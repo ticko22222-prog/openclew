@@ -8,17 +8,26 @@ on:
         required: true
         default: '幫我整理今天的重點'
 
+permissions:
+  contents: write
+
 jobs:
   hello:
     runs-on: ubuntu-latest
     steps:
-      - name: Call OpenRouter
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Generate note with OpenRouter
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           TASK: ${{ github.event.inputs.task }}
         run: |
+          mkdir -p notes
+
           python - <<'PY'
           import os, json, urllib.request, urllib.error
+          from datetime import datetime
 
           api_key = os.environ["OPENROUTER_API_KEY"]
           task = os.environ["TASK"]
@@ -27,7 +36,7 @@ jobs:
           data = {
               "model": "openrouter/free",
               "messages": [
-                  {"role": "system", "content": "你是一隻雲端小龍蝦助理，請用繁體中文簡潔回覆。"},
+                  {"role": "system", "content": "你是一隻雲端小龍蝦助理，請用繁體中文整理內容，格式清楚，適合存成 Markdown 筆記。"},
                   {"role": "user", "content": task}
               ]
           }
@@ -43,18 +52,33 @@ jobs:
               }
           )
 
-          try:
-              with urllib.request.urlopen(req) as resp:
-                  result = json.loads(resp.read().decode("utf-8"))
+          with urllib.request.urlopen(req) as resp:
+              result = json.loads(resp.read().decode("utf-8"))
 
-              text = result["choices"][0]["message"]["content"]
-              print("收到任務：", task)
-              print("AI回覆：")
-              print(text)
+          text = result["choices"][0]["message"]["content"]
 
-          except urllib.error.HTTPError as e:
-              body = e.read().decode("utf-8", errors="ignore")
-              print("HTTP Error:", e.code)
-              print(body)
-              raise
+          now = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
+          filename = f"notes/{now}.md"
+
+          content = f"""# 蝦蝦筆記
+
+          ## 任務
+          {task}
+
+          ## 回覆
+          {text}
+          """
+
+          with open(filename, "w", encoding="utf-8") as f:
+              f.write(content)
+
+          print(f"已建立檔案: {filename}")
           PY
+
+      - name: Commit and push note
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add notes/
+          git diff --cached --quiet || git commit -m "add shrimp note"
+          git push
