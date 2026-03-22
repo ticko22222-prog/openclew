@@ -25,57 +25,84 @@ jobs:
           TASK: ${{ github.event.inputs.task }}
         run: |
           mkdir -p notes
+          python <<'PY'
+import os
+import json
+import re
+import urllib.request
+from datetime import datetime, timezone, timedelta
 
-          python - <<'PY'
-          import os
-          import json
-          import re
-          import urllib.request
-          from datetime import datetime, timezone, timedelta
+api_key = os.environ["OPENROUTER_API_KEY"]
+task = os.environ["TASK"]
 
-          api_key = os.environ["OPENROUTER_API_KEY"]
-          task = os.environ["TASK"]
+req = urllib.request.Request(
+    "https://openrouter.ai/api/v1/chat/completions",
+    data=json.dumps({
+        "model": "openrouter/free",
+        "messages": [
+            {
+                "role": "system",
+                "content": "你是一隻雲端小龍蝦助理，請用繁體中文回覆，整理成 Markdown 筆記，包含：重點摘要、詳細內容、可執行建議。"
+            },
+            {
+                "role": "user",
+                "content": task
+            }
+        ]
+    }).encode("utf-8"),
+    headers={
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com/ticko22222-prog/openclew",
+        "X-OpenRouter-Title": "Manting Shrimp"
+    }
+)
 
-          req = urllib.request.Request(
-              "https://openrouter.ai/api/v1/chat/completions",
-              data=json.dumps({
-                  "model": "openrouter/free",
-                  "messages": [
-                      {
-                          "role": "system",
-                          "content": "你是一隻雲端小龍蝦助理，請用繁體中文回覆，整理成 Markdown 筆記，包含：重點摘要、詳細內容、可執行建議。"
-                      },
-                      {
-                          "role": "user",
-                          "content": task
-                      }
-                  ]
-              }).encode("utf-8"),
-              headers={
-                  "Authorization": f"Bearer {api_key}",
-                  "Content-Type": "application/json",
-                  "HTTP-Referer": "https://github.com/ticko22222-prog/openclew",
-                  "X-OpenRouter-Title": "Manting Shrimp"
-              }
-          )
+with urllib.request.urlopen(req) as resp:
+    result = json.loads(resp.read().decode("utf-8"))
 
-          with urllib.request.urlopen(req) as resp:
-              result = json.loads(resp.read().decode("utf-8"))
+text = result["choices"][0]["message"]["content"].strip()
 
-          text = result["choices"][0]["message"]["content"].strip()
+tw_time = datetime.now(timezone(timedelta(hours=8)))
+date_str = tw_time.strftime("%Y-%m-%d")
+time_str = tw_time.strftime("%H-%M-%S")
+created_at = tw_time.strftime("%Y-%m-%d %H:%M:%S %z")
 
-          tw_time = datetime.now(timezone(timedelta(hours=8)))
-          date_str = tw_time.strftime("%Y-%m-%d")
-          time_str = tw_time.strftime("%H-%M-%S")
-          created_at = tw_time.strftime("%Y-%m-%d %H:%M:%S %z")
+slug = re.sub(r'[\\/:*?"<>|]+', '', task.strip())
+slug = re.sub(r'\s+', '-', slug)
+slug = slug[:30].strip('-') or "shrimp-note"
 
-          slug = re.sub(r'[\\\\/:*?"<>|]+', '', task.strip())
-          slug = re.sub(r'\s+', '-', slug)
-          slug = slug[:30].strip('-') or "shrimp-note"
+title = task[:40].strip() or "蝦蝦筆記"
+filename = f"notes/{date_str}_{time_str}_{slug}.md"
 
-          title = task[:40].strip() or "蝦蝦筆記"
-          filename = f"notes/{date_str}_{time_str}_{slug}.md"
+safe_task = task.replace('"', "'")
 
-          safe_task = task.replace('"', "'")
+content = (
+    "---\n"
+    f'title: "{title}"\n'
+    f'date: "{created_at}"\n'
+    'source: "GitHub Actions + OpenRouter"\n'
+    f'task: "{safe_task}"\n'
+    "tags:\n"
+    "  - shrimp-note\n"
+    "  - ai-generated\n"
+    "---\n\n"
+    f"# {title}\n\n"
+    "## 任務\n"
+    f"{task}\n\n"
+    "## 重點摘要\n"
+    "- 本筆記由蝦蝦自動生成\n"
+    f"- 建立時間：{created_at}\n"
+    f"- 檔案位置：`{filename}`\n\n"
+    "## 內容\n"
+    f"{text}\n"
+)
 
-          content
+with open(filename, "w", encoding="utf-8") as f:
+    f.write(content)
+
+with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+    f.write(f"note_file={filename}\n")
+
+print(f"已建立檔案: {filename}")
+PY
