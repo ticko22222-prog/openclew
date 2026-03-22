@@ -26,8 +26,8 @@ jobs:
           mkdir -p notes
 
           python - <<'PY'
-          import os, json, urllib.request, urllib.error
-          from datetime import datetime
+          import os, json, re, urllib.request
+          from datetime import datetime, timezone, timedelta
 
           api_key = os.environ["OPENROUTER_API_KEY"]
           task = os.environ["TASK"]
@@ -36,7 +36,14 @@ jobs:
           data = {
               "model": "openrouter/free",
               "messages": [
-                  {"role": "system", "content": "你是一隻雲端小龍蝦助理，請用繁體中文整理內容，格式清楚，適合存成 Markdown 筆記。"},
+                  {
+                      "role": "system",
+                      "content": (
+                          "你是一隻雲端小龍蝦助理。"
+                          "請用繁體中文回覆，並輸出成適合 Markdown 筆記保存的內容。"
+                          "格式請包含：1. 重點摘要 2. 詳細內容 3. 可執行建議。"
+                      )
+                  },
                   {"role": "user", "content": task}
               ]
           }
@@ -55,19 +62,46 @@ jobs:
           with urllib.request.urlopen(req) as resp:
               result = json.loads(resp.read().decode("utf-8"))
 
-          text = result["choices"][0]["message"]["content"]
+          text = result["choices"][0]["message"]["content"].strip()
 
-          now = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
-          filename = f"notes/{now}.md"
+          tw_time = datetime.now(timezone(timedelta(hours=8)))
+          date_str = tw_time.strftime("%Y-%m-%d")
+          time_str = tw_time.strftime("%H-%M-%S")
+          created_at = tw_time.strftime("%Y-%m-%d %H:%M:%S %z")
 
-          content = f"""# 蝦蝦筆記
+          slug = task.strip()
+          slug = re.sub(r'[\\\\/:*?"<>|]+', '', slug)
+          slug = re.sub(r'\s+', '-', slug)
+          slug = slug[:30].strip('-')
+          if not slug:
+              slug = "shrimp-note"
 
-          ## 任務
-          {task}
+          filename = f"notes/{date_str}_{time_str}_{slug}.md"
+          title = task[:40].strip()
 
-          ## 回覆
-          {text}
-          """
+          content = f"""---
+title: "{title}"
+date: "{created_at}"
+source: "GitHub Actions + OpenRouter"
+task: "{task}"
+tags:
+  - shrimp-note
+  - ai-generated
+---
+
+# {title}
+
+## 任務
+{task}
+
+## 重點摘要
+- 本筆記由蝦蝦自動生成
+- 建立時間：{created_at}
+- 檔案位置：`{filename}`
+
+## 內容
+{text}
+"""
 
           with open(filename, "w", encoding="utf-8") as f:
               f.write(content)
