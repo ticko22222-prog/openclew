@@ -26,7 +26,10 @@ jobs:
           mkdir -p notes
 
           python - <<'PY'
-          import os, json, re, urllib.request
+          import os
+          import json
+          import re
+          import urllib.request
           from datetime import datetime, timezone, timedelta
 
           api_key = os.environ["OPENROUTER_API_KEY"]
@@ -38,13 +41,12 @@ jobs:
               "messages": [
                   {
                       "role": "system",
-                      "content": (
-                          "你是一隻雲端小龍蝦助理。"
-                          "請用繁體中文回覆，並輸出成適合 Markdown 筆記保存的內容。"
-                          "格式請包含：1. 重點摘要 2. 詳細內容 3. 可執行建議。"
-                      )
+                      "content": "你是一隻雲端小龍蝦助理，請用繁體中文回覆，並輸出成適合 Markdown 筆記保存的內容，格式請包含：1. 重點摘要 2. 詳細內容 3. 可執行建議。"
                   },
-                  {"role": "user", "content": task}
+                  {
+                      "role": "user",
+                      "content": task
+                  }
               ]
           }
 
@@ -76,43 +78,35 @@ jobs:
           if not slug:
               slug = "shrimp-note"
 
+          title = task[:40].strip() or "蝦蝦筆記"
           filename = f"notes/{date_str}_{time_str}_{slug}.md"
-          title = task[:40].strip()
 
-          content = f"""---
-title: "{title}"
-date: "{created_at}"
-source: "GitHub Actions + OpenRouter"
-task: "{task}"
-tags:
-  - shrimp-note
-  - ai-generated
----
+          lines = [
+              "---",
+              f'title: "{title}"',
+              f'date: "{created_at}"',
+              'source: "GitHub Actions + OpenRouter"',
+              f'task: "{task.replace(chr(34), chr(39))}"',
+              "tags:",
+              "  - shrimp-note",
+              "  - ai-generated",
+              "---",
+              "",
+              f"# {title}",
+              "",
+              "## 任務",
+              task,
+              "",
+              "## 重點摘要",
+              "- 本筆記由蝦蝦自動生成",
+              f"- 建立時間：{created_at}",
+              f"- 檔案位置：`{filename}`",
+              "",
+              "## 內容",
+              text,
+              ""
+          ]
 
-# {title}
+          content = "\n".join(lines)
 
-## 任務
-{task}
-
-## 重點摘要
-- 本筆記由蝦蝦自動生成
-- 建立時間：{created_at}
-- 檔案位置：`{filename}`
-
-## 內容
-{text}
-"""
-
-          with open(filename, "w", encoding="utf-8") as f:
-              f.write(content)
-
-          print(f"已建立檔案: {filename}")
-          PY
-
-      - name: Commit and push note
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add notes/
-          git diff --cached --quiet || git commit -m "add shrimp note"
-          git push
+          with open(filename, "w", encoding="utf-8") as
