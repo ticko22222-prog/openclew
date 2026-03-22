@@ -111,3 +111,18 @@ jobs:
           git add notes/
           git diff --cached --quiet || git commit -m "add shrimp note"
           git push
+
+      - name: Send Telegram message
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TASK: ${{ github.event.inputs.task }}
+        run: |
+          MESSAGE="蝦蝦已完成任務：
+          ${TASK}
+
+          筆記已更新到 GitHub repo。"
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            --data-urlencode text="${MESSAGE}"
