@@ -35,24 +35,21 @@ jobs:
           api_key = os.environ["OPENROUTER_API_KEY"]
           task = os.environ["TASK"]
 
-          url = "https://openrouter.ai/api/v1/chat/completions"
-          data = {
-              "model": "openrouter/free",
-              "messages": [
-                  {
-                      "role": "system",
-                      "content": "你是一隻雲端小龍蝦助理，請用繁體中文回覆，並輸出成適合 Markdown 筆記保存的內容，格式請包含：1. 重點摘要 2. 詳細內容 3. 可執行建議。"
-                  },
-                  {
-                      "role": "user",
-                      "content": task
-                  }
-              ]
-          }
-
           req = urllib.request.Request(
-              url,
-              data=json.dumps(data).encode("utf-8"),
+              "https://openrouter.ai/api/v1/chat/completions",
+              data=json.dumps({
+                  "model": "openrouter/free",
+                  "messages": [
+                      {
+                          "role": "system",
+                          "content": "你是一隻雲端小龍蝦助理，請用繁體中文回覆，整理成 Markdown 筆記，包含：重點摘要、詳細內容、可執行建議。"
+                      },
+                      {
+                          "role": "user",
+                          "content": task
+                      }
+                  ]
+              }).encode("utf-8"),
               headers={
                   "Authorization": f"Bearer {api_key}",
                   "Content-Type": "application/json",
@@ -71,42 +68,46 @@ jobs:
           time_str = tw_time.strftime("%H-%M-%S")
           created_at = tw_time.strftime("%Y-%m-%d %H:%M:%S %z")
 
-          slug = task.strip()
-          slug = re.sub(r'[\\\\/:*?"<>|]+', '', slug)
+          slug = re.sub(r'[\\\\/:*?"<>|]+', '', task.strip())
           slug = re.sub(r'\s+', '-', slug)
-          slug = slug[:30].strip('-')
-          if not slug:
-              slug = "shrimp-note"
+          slug = slug[:30].strip('-') or "shrimp-note"
 
           title = task[:40].strip() or "蝦蝦筆記"
           filename = f"notes/{date_str}_{time_str}_{slug}.md"
 
-          lines = [
-              "---",
-              f'title: "{title}"',
-              f'date: "{created_at}"',
-              'source: "GitHub Actions + OpenRouter"',
-              f'task: "{task.replace(chr(34), chr(39))}"',
-              "tags:",
-              "  - shrimp-note",
-              "  - ai-generated",
-              "---",
-              "",
-              f"# {title}",
-              "",
-              "## 任務",
-              task,
-              "",
-              "## 重點摘要",
-              "- 本筆記由蝦蝦自動生成",
-              f"- 建立時間：{created_at}",
-              f"- 檔案位置：`{filename}`",
-              "",
-              "## 內容",
-              text,
-              ""
-          ]
+          safe_task = task.replace('"', "'")
 
-          content = "\n".join(lines)
+          content = (
+              "---\n"
+              f'title: "{title}"\n'
+              f'date: "{created_at}"\n'
+              'source: "GitHub Actions + OpenRouter"\n'
+              f'task: "{safe_task}"\n'
+              "tags:\n"
+              "  - shrimp-note\n"
+              "  - ai-generated\n"
+              "---\n\n"
+              f"# {title}\n\n"
+              "## 任務\n"
+              f"{task}\n\n"
+              "## 重點摘要\n"
+              "- 本筆記由蝦蝦自動生成\n"
+              f"- 建立時間：{created_at}\n"
+              f"- 檔案位置：`{filename}`\n\n"
+              "## 內容\n"
+              f"{text}\n"
+          )
 
-          with open(filename, "w", encoding="utf-8") as
+          with open(filename, "w", encoding="utf-8") as f:
+              f.write(content)
+
+          print(f"已建立檔案: {filename}")
+          PY
+
+      - name: Commit and push note
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add notes/
+          git diff --cached --quiet || git commit -m "add shrimp note"
+          git push
