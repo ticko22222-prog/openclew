@@ -12,41 +12,42 @@ jobs:
   hello:
     runs-on: ubuntu-latest
     steps:
-      - name: Call Gemini
+      - name: Call OpenRouter
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           TASK: ${{ github.event.inputs.task }}
         run: |
           python - <<'PY'
           import os, json, urllib.request, urllib.error
 
-          api_key = os.environ["GEMINI_API_KEY"]
+          api_key = os.environ["OPENROUTER_API_KEY"]
           task = os.environ["TASK"]
 
-          url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+          url = "https://openrouter.ai/api/v1/chat/completions"
           data = {
-              "contents": [
-                  {
-                      "parts": [
-                          {
-                              "text": f"你是一隻雲端小龍蝦助理，請用繁體中文簡潔回覆。\n\n使用者任務：{task}"
-                          }
-                      ]
-                  }
+              "model": "openrouter/free",
+              "messages": [
+                  {"role": "system", "content": "你是一隻雲端小龍蝦助理，請用繁體中文簡潔回覆。"},
+                  {"role": "user", "content": task}
               ]
           }
 
           req = urllib.request.Request(
               url,
               data=json.dumps(data).encode("utf-8"),
-              headers={"Content-Type": "application/json"}
+              headers={
+                  "Authorization": f"Bearer {api_key}",
+                  "Content-Type": "application/json",
+                  "HTTP-Referer": "https://github.com/ticko22222-prog/openclew",
+                  "X-OpenRouter-Title": "Manting Shrimp"
+              }
           )
 
           try:
               with urllib.request.urlopen(req) as resp:
                   result = json.loads(resp.read().decode("utf-8"))
 
-              text = result["candidates"][0]["content"]["parts"][0]["text"]
+              text = result["choices"][0]["message"]["content"]
               print("收到任務：", task)
               print("AI回覆：")
               print(text)
